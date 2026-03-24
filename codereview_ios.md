@@ -1,69 +1,49 @@
-# iOS Code Review Checklist
+# iOS & SwiftUI Code Review Checklist
 
-Based on the Bornfight iOS Code Review guidelines, here is a structured checklist for your pull requests.
+Combined checklist from Bornfight iOS guidelines and modern SwiftUI best practices.
 
 ## 🛠 General & Process
-- [ ] **Merge Conflicts:** Are there any merge conflicts? (If yes, resolve before proceeding).
-- [ ] **Static Analysis:** Has the static analysis check (e.g., SwiftLint) run and passed?
-- [ ] **Xcode Warnings:** Are there any new Xcode warnings introduced by these changes?
-- [ ] **Coding Guidelines:** Is the code consistent with the agreed-upon project coding guidelines?
+- [ ] **Merge Conflicts:** Are there any merge conflicts?
+- [ ] **Xcode Warnings:** Are there any new Xcode warnings introduced?
+- [ ] **Coding Guidelines:** Is the code consistent with the project's style?
 
-## 🏗 Architecture & Design
+## 🏗 Architecture & SwiftUI Structure
 - [ ] **Separation of Concerns:** 
-    - [ ] Data is not fetched or processed in Presenters or Views.
+    - [ ] Logic extracted from Views into ViewModels or Models.
     - [ ] Views are not modified directly in View Models.
-- [ ] **Single Responsibility:** 
+- [ ] **View Composition:** 
+    - [ ] Complex views extracted into smaller, reusable subviews.
     - [ ] Functions have a single purpose.
-    - [ ] Classes do not have too many responsibilities (avoid "Massive View Controllers").
-- [ ] **Single Source of Truth:** Information is not preserved in multiple places.
-- [ ] **Dependency Injection:** Singletons are avoided in favor of dependency injection.
-- [ ] **Composition:** Composition with protocols is preferred over inheritance.
+- [ ] **Modifier Ordering:** Are modifiers applied in the correct order (e.g., padding before background)?
+- [ ] **Dependency Injection:** Singletons avoided in favor of passing dependencies.
+
+## 💾 State Management
+- [ ] **Property Wrappers:** 
+    - [ ] `@State` used for local private state only.
+    - [ ] `@Binding` used for two-way data flow from parents.
+    - [ ] `@StateObject` used for initial creation; `@ObservedObject` for passed-in objects.
+- [ ] **Modern Observation:** Adoption of iOS 17+ `@Observable` where applicable.
+- [ ] **Data Flow:** Is state owned by the correct view and passed down appropriately?
 
 ## 💻 Code Quality & Style
-- [ ] **Naming Conventions:**
-    - [ ] Naming is clear, consistent, and self-documenting.
-    - [ ] Booleans start with `is`, `can`, `should`, or `will`.
-    - [ ] `UpperCamelCase` for types/protocols; `lowerCamelCase` for everything else.
-- [ ] **Encapsulation:**
-    - [ ] Variables and functions use the most restrictive access level possible (`private`, `private(set) `).
-    - [ ] Classes that aren't instantiated are defined as `enums`.
-- [ ] **Constants & Magic Numbers:**
-    - [ ] Magic numbers are avoided and extracted into constants (ideally within a `struct`).
-    - [ ] Static constants (`static let`) are preferred over computed properties for fixed values.
-- [ ] **Safety:**
-    - [ ] Force unwrapping (`!`) is avoided (should be < 1% of cases).
-    - [ ] Early returns (e.g., `guard`) are used to handle optional binding.
-- [ ] **Cleanliness:**
-    - [ ] No commented-out code.
-    - [ ] No unused variables, functions, or imports.
-    - [ ] No duplicate code (logic is extracted and reused).
-    - [ ] Explicit `self` is avoided unless required (e.g., inside closures).
+- [ ] **Naming Conventions:** Clear, consistent, self-documenting. Booleans start with `is`, `can`, `should`.
+- [ ] **Encapsulation:** Use `private` or `private(set)` where possible.
+- [ ] **Constants:** Magic numbers extracted into constants (e.g., `DrawerConstants`).
+- [ ] **Safety:** Force unwrapping (`!`) avoided. `guard` used for early returns.
+- [ ] **Cleanliness:** No commented-out code or unused variables/imports.
 
-## 🚀 Performance & Memory
-- [ ] **Memory Management:**
-    - [ ] Closures use `[weak self]` where appropriate to avoid retain cycles.
-    - [ ] Delegates are marked as `weak`.
-    - [ ] `unowned` is used correctly and not misused.
-- [ ] **Optimization:**
-    - [ ] String concatenation uses interpolation `\()` instead of `+`.
-    - [ ] `isEmpty` is used instead of `count == 0` or `== nil`.
-    - [ ] `!` is used instead of `== false`.
-    - [ ] `DateFormatter` is instantiated once and reused.
-    - [ ] Cells are reused and images are cached.
-    - [ ] Heavy tasks are performed on background threads.
+## 🚀 Performance & Optimization
+- [ ] **View Updates:** Minimize unnecessary body re-computations.
+- [ ] **Lazy Containers:** Proper usage of `LazyVStack`/`LazyHStack` for long lists.
+- [ ] **Identity:** `ForEach` uses stable, unique identifiers.
+- [ ] **Memory Management:** `[weak self]` used in closures to avoid retain cycles.
+- [ ] **Async Workflows:** Prefer `.task` modifier over `onAppear + Task`.
+
+## ♿ Accessibility & Localization
+- [ ] **Accessibility:** Presence of descriptive labels, hints, and traits for VoiceOver.
+- [ ] **Dynamic Type:** Layouts scale correctly with system font size changes.
+- [ ] **Localization:** User-facing strings moved to `Localizable.strings`.
 
 ## 🔒 Security & Error Handling
-- [ ] **Error Handling:** All error cases are handled (logged, user notified, or safe failure).
-- [ ] **Security:**
-    - [ ] No passwords or secrets are stored as plain text.
-    - [ ] No sensitive data is being logged.
-
-## 📝 Documentation & Localization
-- [ ] **Localization:** All user-facing strings are localized.
-- [ ] **Logging:** 
-    - [ ] Important events are logged with sufficient context (class, function, severity).
-    - [ ] Logs are clean and not redundant.
-- [ ] **Documentation:**
-    - [ ] Public functions and complex logic are documented with comments.
-    - [ ] Files contain copyright headers.
-    - [ ] The `README` is updated if necessary.
+- [ ] **Error Handling:** All error cases handled/logged.
+- [ ] **Security:** No secrets or sensitive data logged or stored in plain text.
