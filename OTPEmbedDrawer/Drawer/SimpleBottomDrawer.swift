@@ -23,137 +23,63 @@ struct SimpleBottomDrawer<Content: View>: View {
     }
     
     var body: some View {
-        
-        if isPresented {
-            GeometryReader { proxy in
-                
-                ZStack(alignment: .bottom) {
-                    
-                    // Dim background
-                    Color.black.opacity(0.4)
-                        .ignoresSafeArea()
-                        .onTapGesture {
+        ZStack(alignment: .bottom) {
+            if isPresented {
+                // Dim background
+                Color.black.opacity(0.4)
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        withAnimation {
                             isPresented = false
                         }
-                    
-                    // Drawer
-                    VStack(spacing: 0) {
-                        
-                        Capsule()
-                            .fill(Color.gray.opacity(0.6))
-                            .frame(width: 60, height: 6)
-                            .padding(.vertical, 12)
-                        
-                        content
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, proxy.safeAreaInsets.bottom)
                     }
-                    .frame(maxWidth: .infinity)
-                    .frame(
-                        maxHeight: proxy.size.height,
-                        alignment: .top
-                    )
-                    .background(Color.white)
-                    .cornerRadius(20)
-                    .offset(y: max(dragOffset, 0))
-                    .gesture(
-                        DragGesture()
-                            .updating($dragOffset) { value, state, _ in
-                                state = value.translation.height
-                            }
-                            .onEnded { value in
-                                if value.translation.height > 120 {
+                    .transition(.opacity)
+                
+                // Drawer
+                VStack(spacing: 0) {
+                    Capsule()
+                        .fill(Color.gray.opacity(0.6))
+                        .frame(width: 40, height: 5)
+                        .padding(.vertical, 8)
+                    
+                    content
+                        .padding(.bottom, 20) // Extra padding for safe area handled by VStack
+                }
+                .frame(maxWidth: .infinity)
+                .background(
+                    UnevenRoundedRectangle(topLeadingRadius: 20, topTrailingRadius: 20)
+                        .fill(Color(UIColor.systemBackground))
+                )
+                .offset(y: max(dragOffset, 0))
+                .gesture(
+                    DragGesture()
+                        .updating($dragOffset) { value, state, _ in
+                            state = value.translation.height
+                        }
+                        .onEnded { value in
+                            if value.translation.height > 100 {
+                                withAnimation {
                                     isPresented = false
                                 }
                             }
-                    )
-                }
-            }
-            .transition(.move(edge: .bottom))
-            .animation(.easeOut(duration: 0.25), value: isPresented)
-        }
-    }
-}
-
-
-
-public struct BottomDrawer<SheetContent: View>: View {
-    
-    @Binding var isPresented: Bool
-    private let sheetContent: () -> SheetContent
-    
-    @GestureState private var dragOffset: CGFloat = 0
-    
-    public init(
-        isPresented: Binding<Bool>,
-        @ViewBuilder content: @escaping () -> SheetContent
-    ) {
-        _isPresented = isPresented
-        self.sheetContent = content
-    }
-    
-    public var body: some View {
-        
-        if isPresented {
-            GeometryReader { proxy in
-                
-                ZStack(alignment: .bottom) {
-                    
-                    // Dim background
-                    Color.black.opacity(0.4)
-                        .ignoresSafeArea()
-                        .onTapGesture {
-                            isPresented = false
                         }
-                    
-                    // Drawer
-                    VStack(spacing: 0) {
-                        
-                        // Grabber
-                        Capsule()
-                            .fill(Color.gray.opacity(0.6))
-                            .frame(width: 60, height: 6)
-                            .padding(.vertical, 12)
-                        
-                        sheetContent()
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, proxy.safeAreaInsets.bottom)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .background(Color.white)
-                    .cornerRadius(20)
-                    .offset(y: max(dragOffset, 0))
-                    .gesture(
-                        DragGesture()
-                            .updating($dragOffset) { value, state, _ in
-                                state = value.translation.height
-                            }
-                            .onEnded { value in
-                                if value.translation.height > 120 {
-                                    isPresented = false
-                                }
-                            }
-                    )
-                }
+                )
+                .transition(.move(edge: .bottom))
             }
-            .transition(.move(edge: .bottom))
-            .animation(.easeOut(duration: 0.25), value: isPresented)
         }
+        .ignoresSafeArea()
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isPresented)
     }
 }
-
 
 public extension View {
-    func bottomDrawer<SheetContent: View>(
+    func simpleBottomDrawer<Content: View>(
         isPresented: Binding<Bool>,
-        @ViewBuilder content: @escaping () -> SheetContent
+        @ViewBuilder content: @escaping () -> Content
     ) -> some View {
-        
-        self.overlay(
-            BottomDrawer(
-                isPresented: isPresented,
-                content: content
-            )
-        )
+        ZStack {
+            self
+            SimpleBottomDrawer(isPresented: isPresented, content: content)
+        }
     }
 }

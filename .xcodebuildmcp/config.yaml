@@ -1,0 +1,7 @@
+schemaVersion: 1
+sessionDefaults:
+  projectPath: /Users/jevo/Documents/iOS POC/OTPEmbedDrawer/OTPEmbedDrawer.xcodeproj
+  scheme: OTPEmbedDrawer
+  simulatorId: A95C7057-53EF-49EE-8AC0-1BDB66BA823F
+  simulatorName: iPhone 17
+  simulatorPlatform: iOS Simulator
