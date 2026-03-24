@@ -1,0 +1,29 @@
+# Xcode
+#
+# gitignore contributors: remember to update Global/Xcode.gitignore, Objective-C.gitignore & Swift.gitignore
+
+## User settings
+xcuserdata/
+
+## Root-level folders
+/DerivedData/
+/build/
+
+## Xcode 8 and later
+.DS_Store
+*.swp
+*.lock
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xcworkspace
+!default.xcworkspace
+
+## Swift Package Manager
+.build/
+.swiftpm/
+
+## Dependency directories
+Pods/
+Carthage/Build/
+.vendor/
