@@ -14,21 +14,31 @@ struct ContentView: View {
     var body: some View {
         
         ZStack {
+            Color(UIColor.systemBackground)
+                .ignoresSafeArea()
             
-            Button("Open Drawer") {
-                showDrawer = true
-            }
-            
-            SimpleBottomDrawer(isPresented: $showDrawer) {
-                OTPView()
+            VStack(spacing: 20) {
+                Text("OTP Drawer Sample")
+                    .font(.title)
+                    .fontWeight(.bold)
+                
+                Button(action: {
+                    showDrawer = true
+                }) {
+                    Text("Show OTP Drawer")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.blue)
+                        .cornerRadius(10)
+                }
+                .padding(.horizontal, 40)
             }
         }
+        .adaptiveDrawer(isPresented: $showDrawer) {
+            // Content will auto-resize or scroll
+            OTPView()
+        }
     }
-}
-
-struct TestView: View {
-  var body: some View {
-    Text("Hey there")
-      .padding()
-  }
 }

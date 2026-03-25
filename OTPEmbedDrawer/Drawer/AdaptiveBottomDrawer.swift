@@ -2,154 +2,132 @@
 //  AdaptiveBottomDrawer.swift
 //  OTPEmbedDrawer
 //
-//  Created by Jeevan Pandey on 03/03/26.
-//
 
 import SwiftUI
 
-struct AdaptiveBottomDrawer<Content: View>: View {
+/// A container view that provides an adaptive bottom drawer behavior.
+struct DrawerView<Content: View>: View {
     
     @Binding var isPresented: Bool
-    let config: AdaptiveBottomDrawerConfiguration
-    let content: Content
+    private let content: Content
     
+    @State private var contentHeight: CGFloat = 0
     @GestureState private var dragOffset: CGFloat = 0
-    @State private var currentHeight: CGFloat = 0
     
-    init(
-        isPresented: Binding<Bool>,
-        config: AdaptiveBottomDrawerConfiguration,
-        @ViewBuilder content: () -> Content
-    ) {
-        _isPresented = isPresented
-        self.config = config
+    init(isPresented: Binding<Bool>, @ViewBuilder content: () -> Content) {
+        self._isPresented = isPresented
         self.content = content()
     }
     
     var body: some View {
-        
-        GeometryReader { proxy in
-            
-            let screenHeight = proxy.size.height
-            let width = proxy.size.width
-            
-            ZStack(alignment: .bottom) {
+        ZStack(alignment: .bottom) {
+            if isPresented {
+                dimmedBackground
                 
-                // Background dim
-                if isPresented {
-                    Color.black.opacity(config.dimOpacity)
-                        .ignoresSafeArea()
-                        .onTapGesture { isPresented = false }
-                }
-                
-                if isPresented {
-                    drawer(
-                        proxy: proxy,
-                        screenHeight: screenHeight,
-                        width: width
-                    )
-                }
-            }
-            .onChange(of: isPresented) { presented in
-                if presented {
-                    initializeHeight(screenHeight: screenHeight)
-                }
-            }
-            .animation(.easeOut(duration: 0.25), value: isPresented)
-        }
-        .ignoresSafeArea()
-    }
-}
-
-
-private extension AdaptiveBottomDrawer {
-    
-    func drawer(
-        proxy: GeometryProxy,
-        screenHeight: CGFloat,
-        width: CGFloat
-    ) -> some View {
-        
-        let minOffset = screenHeight - currentHeight
-        
-        return VStack(spacing: 0) {
-            
-            DrawerHandleView(
-                width: width - (config.horizontalPadding * 2),
-                config: config
-            )
-            
-            content
-                .padding(.horizontal, config.horizontalPadding)
-                .padding(.bottom, proxy.safeAreaInsets.bottom)
-        }
-        .frame(width: width)
-        .frame(height: currentHeight, alignment: .top)
-        .background(config.backgroundColor)
-        .clipShape(
-            RoundedCorner(
-                radius: config.cornerRadius,
-                corners: [.topLeft, .topRight]
-            )
-        )
-        .offset(y: max(minOffset + dragOffset, 0))
-        .gesture(
-            DragGesture()
-                .updating($dragOffset) { value, state, _ in
-                    state = value.translation.height
-                }
-                .onEnded { value in
+                GeometryReader { proxy in
+                    let screenHeight = proxy.size.height
+                    let safeAreaBottom = proxy.safeAreaInsets.bottom
+                    let maxHeight = screenHeight * AppConstants.Drawer.maxHeightMultiplier
                     
-                    let newHeight = currentHeight - value.translation.height
+                    // Total height including handle and safe area
+                    let totalHeaderHeight = AppConstants.Drawer.handleHeight + AppConstants.Drawer.handleTopPadding + AppConstants.Drawer.handleBottomPadding
+                    let visibleHeight = min(contentHeight + totalHeaderHeight + safeAreaBottom, maxHeight)
                     
-                    if newHeight < minimumHeight(screenHeight) * 0.7 {
-                        isPresented = false
-                        return
+                    VStack(spacing: 0) {
+                        drawerHandle
+                        
+                        drawerContent(maxContentHeight: maxHeight - totalHeaderHeight - safeAreaBottom)
+                        
+                        Spacer(minLength: 0)
                     }
-                    
-                    currentHeight = nearestDetent(
-                        to: newHeight,
-                        screenHeight: screenHeight
-                    )
+                    .frame(width: proxy.size.width)
+                    .frame(height: screenHeight)
+                    .background(Color(UIColor.systemBackground))
+                    .clipShape(UnevenRoundedRectangle(topLeadingRadius: AppConstants.Drawer.cornerRadius, topTrailingRadius: AppConstants.Drawer.cornerRadius))
+                    .shadow(color: .black.opacity(AppConstants.Drawer.shadowOpacity), radius: AppConstants.Drawer.shadowRadius)
+                    .offset(y: (screenHeight - visibleHeight) + max(dragOffset, 0))
+                    .gesture(dragGesture)
+                    .transition(.move(edge: .bottom))
                 }
-        )
+                .ignoresSafeArea(edges: .bottom)
+            }
+        }
+        .animation(.spring(response: AppConstants.Drawer.springResponse, dampingFraction: AppConstants.Drawer.springDamping), value: isPresented)
+        .onChange(of: isPresented) { _, newValue in
+            if !newValue {
+                contentHeight = 0
+            }
+        }
+    }
+    
+    // MARK: - Subviews
+    
+    private var dimmedBackground: some View {
+        Color.black.opacity(AppConstants.Drawer.backgroundOpacity)
+            .ignoresSafeArea()
+            .onTapGesture { dismiss() }
+            .transition(.opacity)
+    }
+    
+    private var drawerHandle: some View {
+        Capsule()
+            .fill(Color.secondary.opacity(0.4))
+            .frame(width: AppConstants.Drawer.handleWidth, height: AppConstants.Drawer.handleHeight)
+            .padding(.top, AppConstants.Drawer.handleTopPadding)
+            .padding(.bottom, AppConstants.Drawer.handleBottomPadding)
+    }
+    
+    private func drawerContent(maxContentHeight: CGFloat) -> some View {
+        ScrollView(contentHeight > maxContentHeight ? .vertical : []) {
+            content
+                .background(
+                    GeometryReader { contentProxy in
+                        Color.clear.onAppear {
+                            contentHeight = contentProxy.size.height
+                        }
+                        .onChange(of: contentProxy.size.height) { _, newValue in
+                            contentHeight = newValue
+                        }
+                    }
+                )
+        }
+        .frame(maxHeight: maxContentHeight)
+    }
+    
+    // MARK: - Interactions
+    
+    private var dragGesture: some Gesture {
+        DragGesture()
+            .updating($dragOffset) { value, state, _ in
+                state = value.translation.height
+            }
+            .onEnded { value in
+                if value.translation.height > AppConstants.Drawer.dragDismissThreshold || 
+                   value.predictedEndTranslation.height > AppConstants.Drawer.velocityDismissThreshold {
+                    dismiss()
+                }
+            }
+    }
+    
+    private func dismiss() {
+        withAnimation {
+            isPresented = false
+        }
     }
 }
 
-private extension AdaptiveBottomDrawer {
-    
-    func initializeHeight(screenHeight: CGFloat) {
-        currentHeight = minimumHeight(screenHeight)
-    }
-    
-    func minimumHeight(_ screenHeight: CGFloat) -> CGFloat {
-        config.detents
-            .map { resolveDetent($0, screenHeight) }
-            .sorted()
-            .first ?? screenHeight * 0.4
-    }
-    
-    func nearestDetent(
-        to height: CGFloat,
-        screenHeight: CGFloat
-    ) -> CGFloat {
-        
-        let heights = config.detents
-            .map { resolveDetent($0, screenHeight) }
-        
-        return heights.min(by: {
-            abs($0 - height) < abs($1 - height)
-        }) ?? height
-    }
-    
-    func resolveDetent(
-        _ detent: DrawerDetent,
-        _ screenHeight: CGFloat
-    ) -> CGFloat {
-        switch detent {
-        case .height(let h): return h
-        case .fraction(let f): return screenHeight * f
-        case .full: return screenHeight
+public extension View {
+    /// Wraps the view in an adaptive bottom drawer.
+    /// - Parameters:
+    ///   - isPresented: A binding to a Boolean value that determines whether the drawer is presented.
+    ///   - content: A closure that returns the content to be displayed inside the drawer.
+    func adaptiveDrawer<Content: View>(
+        isPresented: Binding<Bool>,
+        @ViewBuilder content: @escaping () -> Content
+    ) -> some View {
+        ZStack {
+            self
+            DrawerView(isPresented: isPresented, content: content)
         }
     }
 }
