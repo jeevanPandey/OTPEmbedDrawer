@@ -22,7 +22,7 @@ A modern SwiftUI implementation of an adaptive bottom drawer featuring a custom 
 
 | Initial State | OTP Drawer |
 | --- | --- |
-| ![Main Screen](docs/screenshots/main_screen.png) | ![OTP Drawer](docs/screenshots/otp_drawer.png) |
+| ![Main Screen](docs/screenshots/main_screen.jpg) | ![OTP Drawer](docs/screenshots/otp_drawer.jpg) |
 
 *(Note: Please replace the placeholder paths above with actual screenshot files in your repository)*
 
