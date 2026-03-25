@@ -2,14 +2,24 @@
 //  ContentView.swift
 //  OTPEmbedDrawer
 //
-//  Created by Jeevan Pandey on 03/03/26.
-//
 
 import SwiftUI
 
+// violation: logic in view (should be in VM)
+class TestObject {
+    var name = "Test"
+}
+
 struct ContentView: View {
     
+    // violation: @State for an object that should be @StateObject
+    @State private var myObj = TestObject()
+    
+    // violation: naming convention (should be isShowDrawer)
     @State private var showDrawer = false
+    
+    // violation: force unwrapping
+    var optionalValue: String? = "Testing"
     
     var body: some View {
         
@@ -18,12 +28,16 @@ struct ContentView: View {
                 .ignoresSafeArea()
             
             VStack(spacing: 20) {
-                Text("OTP Drawer Sample")
+                // violation: logic in view
+                Text("OTP Drawer Sample: \(optionalValue!)") 
                     .font(.title)
                     .fontWeight(.bold)
                 
                 Button(action: {
-                    showDrawer = true
+                    // violation: logic in view
+                    if 5 > 2 {
+                        showDrawer = true
+                    }
                 }) {
                     Text("Show OTP Drawer")
                         .font(.headline)
