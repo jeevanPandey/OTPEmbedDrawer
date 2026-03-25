@@ -5,22 +5,6 @@
 
 import SwiftUI
 
-private enum DrawerConstants {
-    static let backgroundOpacity: Double = 0.3
-    static let handleWidth: CGFloat = 40
-    static let handleHeight: CGFloat = 5
-    static let handleTopPadding: CGFloat = 10
-    static let handleBottomPadding: CGFloat = 10
-    static let maxHeightMultiplier: CGFloat = 0.8
-    static let cornerRadius: CGFloat = 20
-    static let shadowRadius: CGFloat = 10
-    static let shadowOpacity: Double = 0.1
-    static let dragDismissThreshold: CGFloat = 100
-    static let velocityDismissThreshold: CGFloat = 200
-    static let springResponse: Double = 0.35
-    static let springDamping: Double = 0.8
-}
-
 /// A container view that provides an adaptive bottom drawer behavior.
 struct DrawerView<Content: View>: View {
     
@@ -43,10 +27,10 @@ struct DrawerView<Content: View>: View {
                 GeometryReader { proxy in
                     let screenHeight = proxy.size.height
                     let safeAreaBottom = proxy.safeAreaInsets.bottom
-                    let maxHeight = screenHeight * DrawerConstants.maxHeightMultiplier
+                    let maxHeight = screenHeight * AppConstants.Drawer.maxHeightMultiplier
                     
                     // Total height including handle and safe area
-                    let totalHeaderHeight = DrawerConstants.handleHeight + DrawerConstants.handleTopPadding + DrawerConstants.handleBottomPadding
+                    let totalHeaderHeight = AppConstants.Drawer.handleHeight + AppConstants.Drawer.handleTopPadding + AppConstants.Drawer.handleBottomPadding
                     let visibleHeight = min(contentHeight + totalHeaderHeight + safeAreaBottom, maxHeight)
                     
                     VStack(spacing: 0) {
@@ -59,8 +43,8 @@ struct DrawerView<Content: View>: View {
                     .frame(width: proxy.size.width)
                     .frame(height: screenHeight)
                     .background(Color(UIColor.systemBackground))
-                    .clipShape(UnevenRoundedRectangle(topLeadingRadius: DrawerConstants.cornerRadius, topTrailingRadius: DrawerConstants.cornerRadius))
-                    .shadow(color: .black.opacity(DrawerConstants.shadowOpacity), radius: DrawerConstants.shadowRadius)
+                    .clipShape(UnevenRoundedRectangle(topLeadingRadius: AppConstants.Drawer.cornerRadius, topTrailingRadius: AppConstants.Drawer.cornerRadius))
+                    .shadow(color: .black.opacity(AppConstants.Drawer.shadowOpacity), radius: AppConstants.Drawer.shadowRadius)
                     .offset(y: (screenHeight - visibleHeight) + max(dragOffset, 0))
                     .gesture(dragGesture)
                     .transition(.move(edge: .bottom))
@@ -68,7 +52,7 @@ struct DrawerView<Content: View>: View {
                 .ignoresSafeArea(edges: .bottom)
             }
         }
-        .animation(.spring(response: DrawerConstants.springResponse, dampingFraction: DrawerConstants.springDamping), value: isPresented)
+        .animation(.spring(response: AppConstants.Drawer.springResponse, dampingFraction: AppConstants.Drawer.springDamping), value: isPresented)
         .onChange(of: isPresented) { _, newValue in
             if !newValue {
                 contentHeight = 0
@@ -79,7 +63,7 @@ struct DrawerView<Content: View>: View {
     // MARK: - Subviews
     
     private var dimmedBackground: some View {
-        Color.black.opacity(DrawerConstants.backgroundOpacity)
+        Color.black.opacity(AppConstants.Drawer.backgroundOpacity)
             .ignoresSafeArea()
             .onTapGesture { dismiss() }
             .transition(.opacity)
@@ -88,9 +72,9 @@ struct DrawerView<Content: View>: View {
     private var drawerHandle: some View {
         Capsule()
             .fill(Color.secondary.opacity(0.4))
-            .frame(width: DrawerConstants.handleWidth, height: DrawerConstants.handleHeight)
-            .padding(.top, DrawerConstants.handleTopPadding)
-            .padding(.bottom, DrawerConstants.handleBottomPadding)
+            .frame(width: AppConstants.Drawer.handleWidth, height: AppConstants.Drawer.handleHeight)
+            .padding(.top, AppConstants.Drawer.handleTopPadding)
+            .padding(.bottom, AppConstants.Drawer.handleBottomPadding)
     }
     
     private func drawerContent(maxContentHeight: CGFloat) -> some View {
@@ -118,8 +102,8 @@ struct DrawerView<Content: View>: View {
                 state = value.translation.height
             }
             .onEnded { value in
-                if value.translation.height > DrawerConstants.dragDismissThreshold || 
-                   value.predictedEndTranslation.height > DrawerConstants.velocityDismissThreshold {
+                if value.translation.height > AppConstants.Drawer.dragDismissThreshold || 
+                   value.predictedEndTranslation.height > AppConstants.Drawer.velocityDismissThreshold {
                     dismiss()
                 }
             }

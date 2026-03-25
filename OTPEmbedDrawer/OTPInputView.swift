@@ -20,8 +20,11 @@ struct OTPInputView: View {
                 .textContentType(.oneTimeCode)
                 .focused($isFocused)
                 .opacity(0.01)
-                .onChange(of: otpText) { newValue in
+                .onChange(of: otpText) { _, newValue in
                     otpText = String(newValue.prefix(otpLength))
+                    if otpText.count == otpLength {
+                        isFocused = false
+                    }
                 }
 
             // OTP Boxes
@@ -39,9 +42,10 @@ struct OTPInputView: View {
             ToolbarItem(placement: .keyboard) {
                 HStack {
                     Spacer()
-                    Button("Done") {
+                    Button(AppConstants.UI.doneButtonTitle) {
                         isFocused = false
                     }
+                    .foregroundColor(AppConstants.UI.accentColor)
                 }
             }
         }
@@ -57,7 +61,7 @@ struct OTPInputView: View {
             .frame(width: 48, height: 52)
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .stroke(isFocused && otpText.count == index ? Color.blue : Color.gray, lineWidth: 1)
+                    .stroke(isFocused && otpText.count == index ? AppConstants.UI.accentColor : Color.gray, lineWidth: 1)
             )
     }
 }
