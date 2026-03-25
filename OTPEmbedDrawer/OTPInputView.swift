@@ -35,6 +35,16 @@ struct OTPInputView: View {
         .onTapGesture {
             isFocused = true
         }
+        .toolbar {
+            ToolbarItem(placement: .keyboard) {
+                HStack {
+                    Spacer()
+                    Button("Done") {
+                        isFocused = false
+                    }
+                }
+            }
+        }
     }
 
     private func otpBox(at index: Int) -> some View {
