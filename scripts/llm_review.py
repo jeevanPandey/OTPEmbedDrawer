@@ -47,8 +47,8 @@ Instructions:
 5. End your review with a final verdict: "APPROVE" or "REQUEST CHANGES".
     """
     
-    # List of models to try in order of preference
-    models_to_try = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-pro']
+    # List of models CONFIRMED available in your logs
+    models_to_try = ['gemini-flash-latest', 'gemini-pro-latest', 'gemini-2.0-flash']
     
     for model_name in models_to_try:
         for attempt in range(2):
@@ -61,18 +61,15 @@ Instructions:
                 return response.text
             except Exception as e:
                 error_msg = str(e).upper()
-                if "429" in error_msg or "QUOTA" in error_msg or "EXHAUSTED" in error_msg:
-                    print(f"Quota hit for {model_name}. Waiting 15s...")
+                if "429" in error_msg or "QUOTA" in error_msg:
+                    print(f"Quota issue with {model_name}. Waiting 15s...")
                     time.sleep(15)
                     continue
-                elif "404" in error_msg or "NOT_FOUND" in error_msg:
-                    print(f"Model {model_name} not found. Trying next model...")
-                    break # Break inner loop to try next model
                 else:
-                    print(f"Unexpected error with {model_name}: {e}")
-                    break
+                    print(f"Model {model_name} failed: {e}")
+                    break # Try next model
     
-    raise Exception("All models failed to perform the review. Please check your API key and quota.")
+    raise Exception("All confirmed models failed. Please verify billing/quota in AI Studio.")
 
 def main():
     try:
