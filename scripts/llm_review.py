@@ -2,12 +2,11 @@ import os
 import sys
 import json
 import requests
-import google.generativeai as genai
+from google import genai
 from github import Github
 
 # Setup Gemini
-genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-model = genai.GenerativeModel('gemini-1.5-flash')
+client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
 # Setup GitHub
 g = Github(os.environ["GITHUB_TOKEN"])
@@ -48,7 +47,11 @@ Instructions:
 5. End your review with a final verdict: "APPROVE" or "REQUEST CHANGES".
     """
     
-    response = model.generate_content(prompt)
+    # Try gemini-1.5-flash as the standard modern choice
+    response = client.models.generate_content(
+        model='gemini-1.5-flash',
+        contents=prompt
+    )
     return response.text
 
 def main():
@@ -72,6 +75,13 @@ def main():
             
     except Exception as e:
         print(f"Error during review: {e}")
+        # Try listing models to see what's available
+        try:
+            print("Listing available models:")
+            for m in client.models.list():
+                print(f"  - {m.name}")
+        except:
+            pass
         sys.exit(1)
 
 if __name__ == "__main__":
