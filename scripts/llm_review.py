@@ -18,12 +18,23 @@ repo = g.get_repo(repo_name)
 pr = repo.get_pull(pr_number)
 
 def get_pr_diff():
+    # Use the official API endpoint for the PR to get the diff
+    url = f"https://api.github.com/repos/{repo_name}/pulls/{pr_number}"
     headers = {
-        "Authorization": f"token {os.environ['GITHUB_TOKEN']}",
+        "Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}",
         "Accept": "application/vnd.github.v3.diff"
     }
-    response = requests.get(pr.diff_url, headers=headers)
-    return response.text
+    response = requests.get(url, headers=headers)
+    if response.status_code != 200:
+        print(f"Error fetching diff: {response.status_code} - {response.text}")
+        return "Error: Could not fetch PR diff."
+    
+    diff_text = response.text
+    if not diff_text or len(diff_text.strip()) == 0:
+        return "No code changes found in this PR."
+        
+    print(f"Successfully fetched diff ({len(diff_text)} bytes)")
+    return diff_text
 
 def read_checklist():
     with open("codereview_ios.md", "r") as f:
