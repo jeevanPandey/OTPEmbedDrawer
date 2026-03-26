@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import requests
+import time
 from google import genai
 from github import Github
 
@@ -16,7 +17,6 @@ repo = g.get_repo(repo_name)
 pr = repo.get_pull(pr_number)
 
 def get_pr_diff():
-    # Use the GitHub API to get the diff directly
     headers = {
         "Authorization": f"token {os.environ['GITHUB_TOKEN']}",
         "Accept": "application/vnd.github.v3.diff"
@@ -27,8 +27,6 @@ def get_pr_diff():
 def read_checklist():
     with open("codereview_ios.md", "r") as f:
         return f.read()
-
-import time
 
 def review_code(diff, checklist):
     prompt = f"""
@@ -49,24 +47,36 @@ Instructions:
 5. End your review with a final verdict: "APPROVE" or "REQUEST CHANGES".
     """
     
-    # Simple retry logic for 429 errors
-    for attempt in range(3):
-        try:
-            response = client.models.generate_content(
-                model='gemini-2.0-flash',
-                contents=prompt
-            )
-            return response.text
-        except Exception as e:
-            if "429" in str(e) and attempt < 2:
-                print(f"Quota hit. Waiting 20 seconds before retry {attempt + 1}/3...")
-                time.sleep(20)
-                continue
-            raise e
+    # List of models to try in order of preference
+    models_to_try = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-pro']
+    
+    for model_name in models_to_try:
+        for attempt in range(2):
+            try:
+                print(f"Attempting review with {model_name} (Attempt {attempt + 1})...")
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt
+                )
+                return response.text
+            except Exception as e:
+                error_msg = str(e).upper()
+                if "429" in error_msg or "QUOTA" in error_msg or "EXHAUSTED" in error_msg:
+                    print(f"Quota hit for {model_name}. Waiting 15s...")
+                    time.sleep(15)
+                    continue
+                elif "404" in error_msg or "NOT_FOUND" in error_msg:
+                    print(f"Model {model_name} not found. Trying next model...")
+                    break # Break inner loop to try next model
+                else:
+                    print(f"Unexpected error with {model_name}: {e}")
+                    break
+    
+    raise Exception("All models failed to perform the review. Please check your API key and quota.")
 
 def main():
     try:
-        print(f"Reviewing PR #{pr_number}...")
+        print(f"Starting Gemini Review for PR #{pr_number}...")
         diff = get_pr_diff()
         checklist = read_checklist()
         
@@ -75,23 +85,15 @@ def main():
         # Post comment to PR
         pr.create_issue_comment(f"## 🤖 Gemini Code Review\n\n{review_result}")
         
-        # Fail the PR if "REQUEST CHANGES" is present
         if "REQUEST CHANGES" in review_result:
-            print("Review suggests changes. Failing the check.")
+            print("Review complete: Changes requested.")
             sys.exit(1)
         else:
-            print("Review approved.")
+            print("Review complete: Approved.")
             sys.exit(0)
             
     except Exception as e:
-        print(f"Error during review: {e}")
-        # Try listing models to see what's available
-        try:
-            print("Listing available models:")
-            for m in client.models.list():
-                print(f"  - {m.name}")
-        except:
-            pass
+        print(f"FATAL ERROR: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":
