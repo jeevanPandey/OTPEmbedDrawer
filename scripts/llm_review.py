@@ -4,13 +4,14 @@ import json
 import requests
 import time
 from google import genai
-from github import Github
+from github import Github, Auth
 
 # Setup Gemini
 client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
 # Setup GitHub
-g = Github(os.environ["GITHUB_TOKEN"])
+auth = Auth.Token(os.environ["GITHUB_TOKEN"])
+g = Github(auth=auth)
 repo_name = os.environ["GITHUB_REPOSITORY"]
 pr_number = int(os.environ["PR_NUMBER"])
 repo = g.get_repo(repo_name)
