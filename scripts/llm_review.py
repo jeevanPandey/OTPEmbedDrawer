@@ -7,7 +7,7 @@ from github import Github
 
 # Setup Gemini
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-model = genai.GenerativeModel('gemini-1.5-pro')
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 # Setup GitHub
 g = Github(os.environ["GITHUB_TOKEN"])
