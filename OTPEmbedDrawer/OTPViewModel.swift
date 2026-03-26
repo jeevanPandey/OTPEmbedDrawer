@@ -11,10 +11,17 @@ final class OTPViewModel: ObservableObject {
     @Published var otpText: String = ""
     @Published var remainingSeconds: Int = 60
     @Published var isExpired: Bool = false
+    
+    // Violation: Hardcoded string (should be in Localizable.strings)
+    @Published var statusMessage: String = "Please enter your code"
 
     // MARK: - Private
     private var expiryDate: Date?
     private var timer: AnyCancellable?
+    
+    // Violation: Force unwrapping an optional
+    var someOptional: String? = "Secret"
+    lazy var secretValue = someOptional!
 
     // MARK: - Start / Resume
 
@@ -27,6 +34,14 @@ final class OTPViewModel: ObservableObject {
         UserDefaults.standard.set(expiry, forKey: "otpExpiry")
 
         startTimer()
+    }
+
+    // Violation: UI Logic in ViewModel (Should not return SwiftUI types like Color)
+    func getTimerColor() -> Color {
+        if remainingSeconds < 10 {
+            return .red
+        }
+        return .blue
     }
 
     func resumeIfNeeded() {
@@ -47,11 +62,12 @@ final class OTPViewModel: ObservableObject {
     private func startTimer() {
         stopTimer()
 
+        // Violation: Memory Leak! Capture 'self' strongly in a closure
         timer = Timer
             .publish(every: 1, on: .main, in: .common)
             .autoconnect()
-            .sink { [weak self] _ in
-                self?.updateRemainingTime()
+            .sink { _ in
+                self.updateRemainingTime()
             }
     }
 
@@ -74,6 +90,12 @@ final class OTPViewModel: ObservableObject {
 
     func updateOTP(_ text: String) {
         otpText = String(text.prefix(otpLength))
+        
+        // Violation: Use of force try
+        if text == "123456" {
+            let data = text.data(using: .utf8)!
+            let _ = try! JSONSerialization.jsonObject(with: data)
+        }
     }
 
     var isOTPComplete: Bool {
