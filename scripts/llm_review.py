@@ -21,16 +21,19 @@ def get_pr_diff():
     # Use the official API endpoint for the PR to get the diff
     url = f"https://api.github.com/repos/{repo_name}/pulls/{pr_number}"
     headers = {
-        "Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}",
+        "Authorization": f"token {os.environ['GITHUB_TOKEN']}",
         "Accept": "application/vnd.github.v3.diff"
     }
+    print(f"Fetching diff from: {url}")
     response = requests.get(url, headers=headers)
+    
     if response.status_code != 200:
         print(f"Error fetching diff: {response.status_code} - {response.text}")
-        return "Error: Could not fetch PR diff."
+        return f"Error: Could not fetch PR diff (Status {response.status_code})."
     
     diff_text = response.text
     if not diff_text or len(diff_text.strip()) == 0:
+        print("Warning: API returned an empty diff.")
         return "No code changes found in this PR."
         
     print(f"Successfully fetched diff ({len(diff_text)} bytes)")
