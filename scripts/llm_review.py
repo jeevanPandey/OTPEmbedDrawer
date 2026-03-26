@@ -28,6 +28,8 @@ def read_checklist():
     with open("codereview_ios.md", "r") as f:
         return f.read()
 
+import time
+
 def review_code(diff, checklist):
     prompt = f"""
 You are an expert iOS and SwiftUI developer. Your task is to perform a code review on the following Pull Request diff.
@@ -47,12 +49,20 @@ Instructions:
 5. End your review with a final verdict: "APPROVE" or "REQUEST CHANGES".
     """
     
-    # Use gemini-2.0-flash as it is confirmed available in the logs
-    response = client.models.generate_content(
-        model='gemini-2.0-flash',
-        contents=prompt
-    )
-    return response.text
+    # Simple retry logic for 429 errors
+    for attempt in range(3):
+        try:
+            response = client.models.generate_content(
+                model='gemini-2.0-flash',
+                contents=prompt
+            )
+            return response.text
+        except Exception as e:
+            if "429" in str(e) and attempt < 2:
+                print(f"Quota hit. Waiting 20 seconds before retry {attempt + 1}/3...")
+                time.sleep(20)
+                continue
+            raise e
 
 def main():
     try:
