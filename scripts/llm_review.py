@@ -47,9 +47,9 @@ Instructions:
 5. End your review with a final verdict: "APPROVE" or "REQUEST CHANGES".
     """
     
-    # Try gemini-1.5-flash as the standard modern choice
+    # Use gemini-2.0-flash as it is confirmed available in the logs
     response = client.models.generate_content(
-        model='gemini-1.5-flash',
+        model='gemini-2.0-flash',
         contents=prompt
     )
     return response.text
