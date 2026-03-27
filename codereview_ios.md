@@ -19,11 +19,26 @@ Combined checklist from Bornfight iOS guidelines and modern SwiftUI best practic
 
 ## 💾 State Management
 - [ ] **Property Wrappers:** 
-    - [ ] `@State` used for local private state only.
+    - [ ] `@State` used for local private **value types** (Bool, Int, String) only.
+    - [ ] **Senior Audit:** `@State` is NEVER used for reference types (classes). Use `@StateObject` or the iOS 17 `@Observable` macro.
     - [ ] `@Binding` used for two-way data flow from parents.
     - [ ] `@StateObject` used for initial creation; `@ObservedObject` for passed-in objects.
 - [ ] **Modern Observation:** Adoption of iOS 17+ `@Observable` where applicable.
 - [ ] **Data Flow:** Is state owned by the correct view and passed down appropriately?
+
+## 🧵 Concurrency & Async
+- [ ] **Concurrency Safety:** 
+    - [ ] All network calls or long-running tasks are inside `Task` blocks.
+    - [ ] **Actor Safety:** UI-updating properties and methods are correctly marked with `@MainActor`.
+    - [ ] Async/Await used instead of completion handlers where possible.
+- [ ] **Memory Management:** `[weak self]` used in closures to avoid retain cycles.
+- [ ] **Async Workflows:** Prefer `.task` modifier over `onAppear + Task`.
+
+## 🚀 Performance & Optimization
+- [ ] **View Updates:** Minimize unnecessary body re-computations.
+- [ ] **Computation Placement:** **Senior Check:** Heavy computations (sorting, filtering, formatting) are NOT inside SwiftUI `body`. Move them to a background thread or a memoized computed property in the ViewModel.
+- [ ] **Lazy Containers:** Proper usage of `LazyVStack`/`LazyHStack` for long lists.
+- [ ] **Identity:** `ForEach` uses stable, unique identifiers.
 
 ## 💻 Code Quality & Style
 - [ ] **Naming Conventions:** Clear, consistent, self-documenting. Booleans start with `is`, `can`, `should`.
@@ -31,13 +46,6 @@ Combined checklist from Bornfight iOS guidelines and modern SwiftUI best practic
 - [ ] **Constants:** Magic numbers extracted into constants (e.g., `DrawerConstants`).
 - [ ] **Safety:** Force unwrapping (`!`) avoided. `guard` used for early returns.
 - [ ] **Cleanliness:** No commented-out code or unused variables/imports.
-
-## 🚀 Performance & Optimization
-- [ ] **View Updates:** Minimize unnecessary body re-computations.
-- [ ] **Lazy Containers:** Proper usage of `LazyVStack`/`LazyHStack` for long lists.
-- [ ] **Identity:** `ForEach` uses stable, unique identifiers.
-- [ ] **Memory Management:** `[weak self]` used in closures to avoid retain cycles.
-- [ ] **Async Workflows:** Prefer `.task` modifier over `onAppear + Task`.
 
 ## ♿ Accessibility & Localization
 - [ ] **Accessibility:** Presence of descriptive labels, hints, and traits for VoiceOver.
