@@ -5,39 +5,46 @@
 
 import SwiftUI
 
-// violation: logic in view (should be in VM)
-class TestObject {
-    var name = "Test"
+// Violation: Class used with @State instead of @StateObject
+class UserSession: ObservableObject {
+    @Published var username: String = "Guest"
 }
 
 struct ContentView: View {
     
-    // violation: @State for an object that should be @StateObject
-    @State private var myObj = TestObject()
-    
-    // violation: naming convention (should be isShowDrawer)
+    // Violation: Senior Audit - @State used for reference type
+    @State private var session = UserSession()
     @State private var showDrawer = false
-    
-    // violation: force unwrapping
-    var optionalValue: String? = "Testing"
+    @State private var items = Array(0...1000).map { "Item \($0)" }
     
     var body: some View {
+        
+        // Violation: Performance - Heavy computation inside body
+        let processedItems = items
+            .filter { $0.contains("1") }
+            .sorted { $0 > $1 }
+            .map { $0.uppercased() }
         
         ZStack {
             Color(UIColor.systemBackground)
                 .ignoresSafeArea()
             
             VStack(spacing: 20) {
-                // violation: logic in view
-                Text("OTP Drawer Sample: \(optionalValue!)") 
+                Text("User: \(session.username)")
                     .font(.title)
-                    .fontWeight(.bold)
+                
+                List(processedItems.prefix(10), id: \.self) { item in
+                    Text(item)
+                }
                 
                 Button(action: {
-                    // violation: logic in view
-                    if 5 > 2 {
-                        showDrawer = true
+                    // Violation: Concurrency - Background update without MainActor
+                    DispatchQueue.global().async {
+                        // Simulating work
+                        Thread.sleep(forTimeInterval: 1)
+                        session.username = "Senior User" // Crashes/Warnings in SwiftUI
                     }
+                    showDrawer = true
                 }) {
                     Text("Show OTP Drawer")
                         .font(.headline)
@@ -51,9 +58,7 @@ struct ContentView: View {
             }
         }
         .adaptiveDrawer(isPresented: $showDrawer) {
-            // Content will auto-resize or scroll
             OTPView()
         }
     }
 }
-// Trigger review
