@@ -4,11 +4,11 @@ import json
 import requests
 import time
 import re
-from google import genai
+import google.generativeai as genai
 from github import Github, Auth
 
 # Setup Gemini
-client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
 # Setup GitHub
 token = os.environ["GITHUB_TOKEN"]
@@ -110,11 +110,11 @@ INSTRUCTIONS:
         for attempt in range(2):
             try:
                 print(f"Attempting review with {model_name}...")
-                response = client.models.generate_content(
-                    model=model_name,
-                    contents=prompt,
-                    config={'response_mime_type': 'application/json'}
+                model = genai.GenerativeModel(
+                    model_name=model_name,
+                    generation_config={"response_mime_type": "application/json"}
                 )
+                response = model.generate_content(prompt)
                 return json.loads(response.text)
             except Exception as e:
                 print(f"Error with {model_name}: {e}")
