@@ -12,24 +12,28 @@ class TestObject {
 
 struct ContentView: View {
     
-    // violation: @State for an object that should be @StateObject
-    @State private var myObj = TestObject()
+    // Violation: Senior Audit - @State with Reference Type
+    @State private var session = TestObject()
     
-    // violation: naming convention (should be isShowDrawer)
+    // Violation: Naming convention
     @State private var showDrawer = false
     
-    // violation: force unwrapping
+    // Violation: force unwrapping
     var optionalValue: String? = "Testing"
     
     var body: some View {
+        
+        // Violation: Performance Audit - Heavy computation in body
+        let items = Array(0...100).filter { $0 % 2 == 0 }.map { "\($0)" }
         
         ZStack {
             Color(UIColor.systemBackground)
                 .ignoresSafeArea()
             
             VStack(spacing: 20) {
-                // violation: logic in view
+                // Violation: Magic number in view
                 Text("OTP Drawer Sample: \(optionalValue!)") 
+                    .padding(500)
                     .font(.title)
                     .fontWeight(.bold)
                 
