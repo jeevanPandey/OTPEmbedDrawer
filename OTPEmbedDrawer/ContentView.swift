@@ -42,6 +42,11 @@ struct ContentView: View {
                     if 5 > 2 {
                         showDrawer = true
                     }
+                    
+                    // Violation: Weak self missing in async closure
+                    DispatchQueue.main.async {
+                        print("Updating UI without weak self")
+                    }
                 }) {
                     Text("Show OTP Drawer")
                         .font(.headline)
@@ -52,6 +57,11 @@ struct ContentView: View {
                         .cornerRadius(10)
                 }
                 .padding(.horizontal, 40)
+                
+                // Violation: Accessibility missing for icon-only button
+                Button(action: { }) {
+                    Image(systemName: "trash")
+                }
             }
         }
         .adaptiveDrawer(isPresented: $showDrawer) {
