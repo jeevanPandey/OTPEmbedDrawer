@@ -36,12 +36,11 @@ opt_in_rules: # some rules are only opt-in
   - literal_expression_end_indentation
   - lower_acl_than_parent
   - modifier_order # [Checklist: Architecture - Modifier Ordering]
-  - nim_character_count
   - nsobject_prefer_isequal
   - number_separator
   - object_literal
   - operator_usage_whitespace
-  - overriden_super_call
+  - overridden_super_call
   - override_in_extension
   - pattern_matching_keywords
   - prefer_self_in_static_references
@@ -55,7 +54,6 @@ opt_in_rules: # some rules are only opt-in
   - sorted_first_last
   - sorted_imports
   - static_operator
-  - strong_outlets
   - switch_case_on_newline
   - toggle_bool
   - unavailable_function
