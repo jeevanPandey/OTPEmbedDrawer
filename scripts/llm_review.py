@@ -30,17 +30,24 @@ def get_valid_lines(patch):
     valid_lines = set()
     current_line = 0
     
+    # Matches hunk header: @@ -old_start,old_count +new_start,new_count @@
     hunk_header_re = re.compile(r'^@@ \-\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@')
     
     for line in patch.split('\n'):
         hunk_match = hunk_header_re.match(line)
         if hunk_match:
+            # When we see a hunk header, current_line becomes the first line of the NEW file in this hunk
             current_line = int(hunk_match.group(1))
         elif line.startswith('-'):
+            # This line exists in the old file but NOT the new file.
+            # We don't increment current_line because it's not in the new version.
             continue
         elif line.startswith('+') or line.startswith(' ') or line == "":
+            # This line exists in the new file (either added or unchanged context).
+            # We increment current_line.
             valid_lines.add(current_line)
             current_line += 1
+        # Metadata lines like '\ No newline at end of file' are ignored
             
     return valid_lines
 
@@ -88,7 +95,7 @@ Files Context:
 {files_context}
 
 INSTRUCTIONS:
-1. ONLY comment on line numbers that are explicitly listed in the 'VALID LINE NUMBERS' for each file. These represent lines changed or in context of the PR.
+1. ONLY comment on line numbers that are explicitly listed in the 'VALID LINE NUMBERS' for each file.
 2. If a violation spans multiple lines, use the FIRST line of the violation that is in the valid list.
 3. Format response STRICTLY as JSON:
 {{
@@ -104,7 +111,16 @@ INSTRUCTIONS:
 }}
     """
     
-    models_to_try = ['gemini-2.0-flash-exp', 'gemini-1.5-flash', 'gemini-1.5-pro']
+    # We use list_models to find names that actually exist in the environment
+    available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+    print(f"Available models: {available_models}")
+    
+    # Preferred order
+    pref = ['models/gemini-1.5-flash', 'models/gemini-1.5-pro', 'models/gemini-2.0-flash-exp']
+    models_to_try = [m for m in pref if m in available_models]
+    if not models_to_try:
+        # Fallback to whatever matches the pattern
+        models_to_try = [m for m in available_models if 'gemini' in m]
     
     for model_name in models_to_try:
         for attempt in range(2):
@@ -169,6 +185,7 @@ def main():
         print(f"Starting Gemini Robust Review for PR #{pr_number}...")
         file_data = get_pr_files()
         if not file_data:
+            print("No relevant Swift files to review.")
             sys.exit(0)
             
         checklist = read_checklist()
@@ -188,13 +205,12 @@ def main():
                 github_comments.append(c)
             else:
                 print(f"Skipping comment on {path}:{line} - not in diff range.")
-                summary += f"\n\n**Note on {path}:{line}**: {c['body']}"
+                summary += f"\n\n**AI Note on {path}:{line}**: {c['body']}"
             
         event = "REQUEST_CHANGES" if verdict == "REQUEST CHANGES" else ("APPROVE" if verdict == "APPROVE" else "COMMENT")
         
         create_github_review(summary, event, github_comments)
-        # Always exit with 0 to prevent GitHub Actions from showing as "Failed" 
-        # just because the AI found issues in the code.
+        # Success status 0 even if issues found, to keep CI flow green
         sys.exit(0)
             
     except Exception as e:
