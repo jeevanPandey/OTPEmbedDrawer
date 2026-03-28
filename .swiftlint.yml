@@ -1,0 +1,117 @@
+# SwiftLint Configuration - Automated Senior Reviewer
+# Mapped from: codereview_ios.md
+
+disabled_rules: # rule identifiers to exclude from running
+  - trailing_whitespace
+  - todo
+  - function_body_length
+
+opt_in_rules: # some rules are only opt-in
+  - force_unwrapping # [Checklist: Safety - Force unwrapping avoided]
+  - private_outlet
+  - attributes
+  - empty_count
+  - contains_over_first_not_nil
+  - convenience_type
+  - discarded_notification_center_observer
+  - discouraged_object_literal
+  - discouraged_optional_boolean
+  - discouraged_optional_collection
+  - empty_string
+  - empty_xctest_method
+  - enum_case_associated_values_count
+  - expiring_todo
+  - explicit_init
+  - fallthrough
+  - fatal_error_message
+  - file_header
+  - file_name
+  - first_where
+  - flatmap_over_map_reduce
+  - identical_operands
+  - joined_default_parameter
+  - last_where
+  - legacy_random
+  - let_var_whitespace
+  - literal_expression_end_indentation
+  - lower_acl_than_parent
+  - modifier_order # [Checklist: Architecture - Modifier Ordering]
+  - nim_character_count
+  - nsobject_prefer_isequal
+  - number_separator
+  - object_literal
+  - operator_usage_whitespace
+  - overriden_super_call
+  - override_in_extension
+  - pattern_matching_keywords
+  - prefer_self_in_static_references
+  - prefer_zero_over_explicit_init
+  - private_action
+  - prohibited_interface_builder
+  - redundant_nil_coalescing
+  - redundant_type_annotation
+  - required_enum_case
+  - single_test_class
+  - sorted_first_last
+  - sorted_imports
+  - static_operator
+  - strong_outlets
+  - switch_case_on_newline
+  - toggle_bool
+  - unavailable_function
+  - unneeded_parentheses_in_closure_argument
+  - untyped_error_in_catch
+  - vertical_parameter_alignment_on_call
+  - xct_specific_matcher
+  - yoda_condition
+
+# Custom rules to match the Senior Checklist items that aren't standard
+custom_rules:
+  # [Checklist: State Management - Senior Audit: @State never used for classes]
+  state_property_wrapper_reference_type:
+    name: "Senior Audit: @State with Reference Type"
+    regex: "@State\\s+(?:private\\s+)?var\\s+\\w+\\s*=\\s*\\w+\\(\\)"
+    message: "@State should only be used for value types (structs). For classes, use @StateObject or @Observable."
+    severity: error
+
+  # [Checklist: Performance - Senior Check: Heavy computations NOT inside body]
+  heavy_computation_in_body:
+    name: "Senior Check: Logic in View Body"
+    regex: "var\\s+body:\\s+some\\s+View\\s*\\{[^\\}]*(?:\\.filter|\\.sorted|\\.map|\\.reduce|\\.compactMap)\\s*\\{"
+    message: "Heavy computations (filter/sort/map) should be moved to a ViewModel or memoized property, not inside 'body'."
+    severity: warning
+
+  # [Checklist: Code Quality - Magic numbers extracted]
+  magic_number_view:
+    name: "Magic Number in View"
+    regex: "(?:padding|frame|spacing|cornerRadius)\\((\\d{3,}|[1-9]\\d{2,})\\)"
+    message: "Avoid large magic numbers in views. Extract to AppConstants or DrawerConstants."
+    severity: warning
+
+  # [Checklist: Concurrency - MainActor for UI updates]
+  main_actor_missing_on_published:
+    name: "MainActor check for Published"
+    regex: "(?<!@MainActor\\s)class\\s+\\w+:\\s*ObservableObject"
+    message: "ObservableObject classes should usually be marked @MainActor to ensure UI updates happen on the main thread."
+    severity: warning
+
+# Standard Rule Configurations
+force_unwrapping: error
+naming_convention:
+  variable_name:
+    min_length: 3
+    max_length: 40
+  type_name:
+    min_length: 3
+    max_length: 40
+
+line_length: 120
+type_body_length: 300
+file_length: 500
+
+included: # paths to include during linting
+  - OTPEmbedDrawer
+excluded: # paths to ignore during linting
+  - Pods
+  - .build
+  - DerivedData
