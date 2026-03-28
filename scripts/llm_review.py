@@ -104,7 +104,7 @@ INSTRUCTIONS:
 }}
     """
     
-    models_to_try = ['gemini-2.0-flash-exp', 'gemini-1.5-flash-latest', 'gemini-1.5-pro-latest']
+    models_to_try = ['gemini-2.0-flash-exp', 'gemini-1.5-flash', 'gemini-1.5-pro']
     
     for model_name in models_to_try:
         for attempt in range(2):
