@@ -30,20 +30,21 @@ def get_valid_lines(patch):
     valid_lines = set()
     current_line = 0
     
+    # Matches hunk header: @@ -old_start,old_count +new_start,new_count @@
     hunk_header_re = re.compile(r'^@@ \-\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@')
     
     for line in patch.split('\n'):
         hunk_match = hunk_header_re.match(line)
         if hunk_match:
             current_line = int(hunk_match.group(1))
-        elif line.startswith('+'):
-            valid_lines.add(current_line)
-            current_line += 1
-        elif line.startswith(' '):
-            valid_lines.add(current_line)
-            current_line += 1
         elif line.startswith('-'):
-            pass
+            # Deletions exist in the old file, not the new one
+            continue
+        elif line.startswith('+') or line.startswith(' ') or line == "":
+            # Addition or Context line (including empty context lines)
+            valid_lines.add(current_line)
+            current_line += 1
+        # Metadata like '\ No newline at end of file' is ignored
             
     return valid_lines
 
@@ -57,6 +58,7 @@ def get_pr_files():
             continue
             
         try:
+            # We fetch the full content for context, but we need the patch for valid lines
             content = repo.get_contents(file.filename, ref=pr.head.sha).decoded_content.decode("utf-8")
             valid_lines = get_valid_lines(file.patch)
             file_data.append({
@@ -78,7 +80,7 @@ def review_code(file_data, checklist):
     files_context = ""
     for f in file_data:
         sorted_lines = sorted(f['valid_lines'])
-        files_context += f"\n--- FILE: {f['path']} ---\nVALID LINE NUMBERS: {sorted_lines}\nFULL CONTENT:\n{f['content']}\n"
+        files_context += f"\n--- FILE: {f['path']} ---\nVALID LINE NUMBERS (IN DIFF): {sorted_lines}\nFULL CONTENT:\n{f['content']}\n"
 
     prompt = f"""
 You are an expert iOS and SwiftUI developer performing a code review.
@@ -91,7 +93,7 @@ Files Context:
 {files_context}
 
 INSTRUCTIONS:
-1. ONLY comment on line numbers that are explicitly listed in the 'VALID LINE NUMBERS' for each file.
+1. ONLY comment on line numbers that are explicitly listed in the 'VALID LINE NUMBERS' for each file. These represent the lines changed or surrounding context in the PR.
 2. If a violation spans multiple lines, use the FIRST line of the violation that is in the valid list.
 3. Format response STRICTLY as JSON:
 {{
@@ -107,7 +109,7 @@ INSTRUCTIONS:
 }}
     """
     
-    models_to_try = ['gemini-flash-latest', 'gemini-pro-latest', 'gemini-2.0-flash']
+    models_to_try = ['gemini-2.0-flash', 'gemini-1.5-pro']
     
     for model_name in models_to_try:
         for attempt in range(2):
@@ -140,7 +142,6 @@ def create_github_review(summary, event, comments):
     }
     
     if comments:
-        # Add side="RIGHT" which is required for modern line-based comments on the new code
         payload["comments"] = [
             {
                 "path": c["path"],
@@ -150,13 +151,13 @@ def create_github_review(summary, event, comments):
             } for c in comments
         ]
     
-    print(f"Sending review payload to {url}...")
+    print(f"Sending review payload to {url} with {len(comments) if comments else 0} comments...")
     response = requests.post(url, headers=headers, json=payload)
     
     if response.status_code not in [200, 201]:
-        print(f"API Error: {response.status_code} - {response.text}")
-        # Fallback to a simple comment if inline review fails
-        pr.create_issue_comment(f"## 🤖 Gemini Code Review (Fallback)\n\n{summary}\n\n*Note: Inline comments failed to post due to API error {response.status_code}*")
+        print(f"FATAL API Error: {response.status_code} - {response.text}")
+        error_details = response.json() if response.headers.get('Content-Type') == 'application/json' else response.text
+        pr.create_issue_comment(f"## 🤖 Gemini Code Review (Failed)\n\n**Status**: {response.status_code}\n**Error**: `{error_details}`\n\n*Review summary would have been:*\n{summary}")
         return False
         
     print("Review posted successfully.")
