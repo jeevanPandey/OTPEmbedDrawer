@@ -97,13 +97,12 @@ custom_rules:
 
 # Standard Rule Configurations
 force_unwrapping: error
-naming_convention:
-  variable_name:
-    min_length: 3
-    max_length: 40
-  type_name:
-    min_length: 3
-    max_length: 40
+identifier_name:
+  min_length: 3
+  max_length: 40
+type_name:
+  min_length: 3
+  max_length: 40
 
 line_length: 120
 type_body_length: 300
