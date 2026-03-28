@@ -8,13 +8,16 @@ on:
 
 jobs:
   SwiftLint:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: GitHub Action for SwiftLint (Inline Annotations)
-        uses: norio-nomura/action-swiftlint@3.2.1
+      - name: SwiftLint
+        uses: realm/swiftlint@v1
+        with:
+          version: 'latest'
+          # This will automatically post annotations to the PR
+          executable: /usr/local/bin/swiftlint
+          reporter: 'github-actions-log'
         env:
           DIFF_BASE: ${{ github.base_ref }}
-        with:
-          args: --strict
