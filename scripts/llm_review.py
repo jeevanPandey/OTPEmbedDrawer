@@ -11,32 +11,56 @@ from github import Github, Auth
 client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
 # Setup GitHub
-auth = Auth.Token(os.environ["GITHUB_TOKEN"])
+token = os.environ["GITHUB_TOKEN"]
+auth = Auth.Token(token)
 g = Github(auth=auth)
 repo_name = os.environ["GITHUB_REPOSITORY"]
 pr_number = int(os.environ["PR_NUMBER"])
 repo = g.get_repo(repo_name)
 pr = repo.get_pull(pr_number)
 
+def get_valid_lines(patch):
+    """
+    Parses a git patch string and returns a set of line numbers 
+    that are valid for commenting in a GitHub review (the 'new' lines).
+    """
+    if not patch:
+        return set()
+    
+    valid_lines = set()
+    current_line = 0
+    
+    hunk_header_re = re.compile(r'^@@ \-\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@')
+    
+    for line in patch.split('\n'):
+        hunk_match = hunk_header_re.match(line)
+        if hunk_match:
+            current_line = int(hunk_match.group(1))
+        elif line.startswith('-'):
+            continue
+        elif line.startswith('+') or line.startswith(' ') or line == "":
+            valid_lines.add(current_line)
+            current_line += 1
+            
+    return valid_lines
+
 def get_pr_files():
-    """Returns a list of files changed in the PR with their status and content."""
     files = pr.get_files()
     file_data = []
     for file in files:
         if file.status == "removed":
             continue
-        
-        # Only review Swift files for now
         if not file.filename.endswith(".swift"):
             continue
             
         try:
-            # Fetch the full content of the file from the PR branch
             content = repo.get_contents(file.filename, ref=pr.head.sha).decoded_content.decode("utf-8")
+            valid_lines = get_valid_lines(file.patch)
             file_data.append({
                 "path": file.filename,
                 "content": content,
-                "patch": file.patch # This contains the diff for this specific file
+                "patch": file.patch,
+                "valid_lines": list(valid_lines)
             })
         except Exception as e:
             print(f"Warning: Could not fetch content for {file.filename}: {e}")
@@ -48,122 +72,134 @@ def read_checklist():
         return f.read()
 
 def review_code(file_data, checklist):
-    # Prepare the prompt with all file contents and their diffs
     files_context = ""
     for f in file_data:
-        files_context += f"\n--- FILE: {f['path']} ---\nFULL CONTENT:\n{f['content']}\n\nDIFF (PATCH):\n{f['patch']}\n"
+        sorted_lines = sorted(f['valid_lines'])
+        files_context += f"\n--- FILE: {f['path']} ---\nVALID LINE NUMBERS (IN DIFF): {sorted_lines}\nFULL CONTENT:\n{f['content']}\n"
 
     prompt = f"""
-You are an expert iOS and SwiftUI developer. Your task is to perform a code review on the following files from a Pull Request.
-You MUST use the provided checklist to evaluate the changes.
+You are an expert iOS and SwiftUI developer performing a code review.
+You MUST use the provided checklist.
 
 Checklist:
 {checklist}
 
-Files Context (Full content and their specific diffs):
+Files Context:
 {files_context}
 
 INSTRUCTIONS:
-1. Review the changes against each item in the checklist.
-2. For each violation, identify the EXACT line number in the FULL CONTENT of the file.
-3. Format your response STRICTLY as a JSON object with the following structure:
+1. ONLY comment on line numbers that are explicitly listed in the 'VALID LINE NUMBERS' for each file. These represent lines changed or in context of the PR.
+2. If a violation spans multiple lines, use the FIRST line of the violation that is in the valid list.
+3. Format response STRICTLY as JSON:
 {{
-  "summary": "Overall summary of the review",
+  "summary": "Overall summary",
   "verdict": "APPROVE" or "REQUEST CHANGES",
   "comments": [
     {{
       "path": "file/path.swift",
       "line": 123,
-      "body": "Clear explanation of the violation and suggested fix."
+      "body": "Explanation"
     }}
   ]
 }}
-4. If there are no violations, return an empty comments list and "APPROVE".
-5. Ensure the JSON is valid and contains no extra text outside the JSON block.
     """
     
-    models_to_try = ['gemini-flash-latest', 'gemini-pro-latest', 'gemini-2.0-flash']
+    models_to_try = ['gemini-2.0-flash', 'gemini-1.5-pro']
     
     for model_name in models_to_try:
         for attempt in range(2):
             try:
-                print(f"Attempting review with {model_name} (Attempt {attempt + 1})...")
-                # Use JSON output mode if supported, otherwise just parse the string
+                print(f"Attempting review with {model_name}...")
                 response = client.models.generate_content(
                     model=model_name,
                     contents=prompt,
-                    config={
-                        'response_mime_type': 'application/json'
-                    }
+                    config={'response_mime_type': 'application/json'}
                 )
-                
-                # Parse the response to ensure it's valid JSON
                 return json.loads(response.text)
             except Exception as e:
-                error_msg = str(e).upper()
-                if "429" in error_msg or "QUOTA" in error_msg:
-                    print(f"Quota issue with {model_name}. Waiting 15s...")
-                    time.sleep(15)
-                    continue
-                else:
-                    print(f"Model {model_name} failed: {e}")
-                    break
+                print(f"Error with {model_name}: {e}")
+                time.sleep(5)
     
-    raise Exception("All models failed to perform the review.")
+    raise Exception("Review failed on all models.")
+
+def create_github_review(summary, event, comments):
+    """Uses the direct REST API to create a review with better error reporting."""
+    url = f"https://api.github.com/repos/{repo_name}/pulls/{pr_number}/reviews"
+    headers = {
+        "Authorization": f"token {token}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+    
+    payload = {
+        "body": f"## 🤖 Gemini Code Review\n\n{summary}",
+        "event": event,
+        "commit_id": pr.head.sha
+    }
+    
+    if comments:
+        payload["comments"] = [
+            {
+                "path": c["path"],
+                "line": int(c["line"]),
+                "side": "RIGHT",
+                "body": c["body"]
+            } for c in comments
+        ]
+    
+    print(f"Sending review payload to {url} with {len(comments) if comments else 0} comments...")
+    response = requests.post(url, headers=headers, json=payload)
+    
+    if response.status_code not in [200, 201]:
+        print(f"API Error: {response.status_code} - {response.text}")
+        error_msg = response.text
+        try:
+            error_json = response.json()
+            error_msg = json.dumps(error_json, indent=2)
+        except:
+            pass
+            
+        pr.create_issue_comment(f"## 🤖 Gemini Code Review (Fallback)\n\n{summary}\n\n*Note: Inline review failed ({response.status_code}):*\n```json\n{error_msg}\n```")
+        return False
+        
+    print("Review posted successfully.")
+    return True
 
 def main():
     try:
-        print(f"Starting Gemini Inline Review for PR #{pr_number}...")
-        
+        print(f"Starting Gemini Robust Review for PR #{pr_number}...")
         file_data = get_pr_files()
         if not file_data:
-            print("No Swift files to review.")
             sys.exit(0)
             
         checklist = read_checklist()
         review_result = review_code(file_data, checklist)
         
-        summary = review_result.get("summary", "Gemini Code Review")
+        summary = review_result.get("summary", "Gemini Code Review Summary")
         verdict = review_result.get("verdict", "APPROVE")
         comments = review_result.get("comments", [])
         
-        print(f"Review complete. Verdict: {verdict}. Found {len(comments)} issues.")
-        
-        # Convert comments to the format expected by the GitHub Review API
-        # We need to filter out comments that might have invalid line numbers
         github_comments = []
         for c in comments:
-            github_comments.append({
-                "path": c["path"],
-                "line": int(c["line"]),
-                "body": c["body"]
-            })
+            path = c["path"]
+            line = int(c["line"])
+            f_data = next((f for f in file_data if f["path"] == path), None)
             
-        # Post the review with inline comments
-        if github_comments:
-            event = "REQUEST_CHANGES" if verdict == "REQUEST CHANGES" else "COMMENT"
-            pr.create_review(
-                body=f"## 🤖 Gemini Code Review\n\n{summary}",
-                event=event,
-                comments=github_comments
-            )
-        else:
-            # Just post a summary if no specific inline comments
-            event = "APPROVE" if verdict == "APPROVE" else "COMMENT"
-            pr.create_review(
-                body=f"## 🤖 Gemini Code Review\n\n{summary}",
-                event=event
-            )
+            if f_data and line in f_data["valid_lines"]:
+                github_comments.append(c)
+            else:
+                print(f"Skipping comment on {path}:{line} - not in diff range.")
+                summary += f"\n\n**Note on {path}:{line}**: {c['body']}"
             
-        if verdict == "REQUEST CHANGES":
-            sys.exit(1)
-        else:
-            sys.exit(0)
+        event = "REQUEST_CHANGES" if verdict == "REQUEST CHANGES" else ("APPROVE" if verdict == "APPROVE" else "COMMENT")
+        
+        create_github_review(summary, event, github_comments)
+        # Always exit with 0 to prevent GitHub Actions from showing as "Failed" 
+        # just because the AI found issues in the code.
+        sys.exit(0)
             
     except Exception as e:
         print(f"FATAL ERROR: {e}")
-        # Post a fallback comment if the whole process fails
-        pr.create_issue_comment(f"## 🤖 Gemini Code Review\n\nError performing automated review: {e}")
+        pr.create_issue_comment(f"## 🤖 Gemini Code Review\n\nAutomated review failed: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":
