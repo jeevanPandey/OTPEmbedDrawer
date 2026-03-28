@@ -1,4 +1,4 @@
-name: Free Code Review (SwiftLint)
+name: "Automated code review:"
 
 on:
   pull_request:
