@@ -1,0 +1,140 @@
+# SwiftLint Configuration - Automated Senior Reviewer
+# Aligned with: codereview_ios.md
+
+disabled_rules:
+  - trailing_whitespace
+  - todo
+  - function_body_length
+
+opt_in_rules:
+  - force_unwrapping # [Checklist: Safety - Force unwrapping avoided]
+  - modifier_order # [Checklist: Architecture - Modifier Ordering]
+  - sorted_imports # [Checklist: Cleanliness]
+  - attributes
+  - contains_over_first_not_nil
+  - convenience_type
+  - discarded_notification_center_observer
+  - discouraged_object_literal
+  - discouraged_optional_boolean
+  - discouraged_optional_collection
+  - empty_count
+  - empty_string
+  - empty_xctest_method
+  - enum_case_associated_values_count
+  - expiring_todo
+  - explicit_init
+  - fallthrough
+  - fatal_error_message
+  - file_header
+  - file_name
+  - first_where
+  - flatmap_over_map_reduce
+  - identical_operands
+  - joined_default_parameter
+  - last_where
+  - legacy_random
+  - let_var_whitespace
+  - literal_expression_end_indentation
+  - lower_acl_than_parent
+  - nsobject_prefer_isequal
+  - number_separator
+  - object_literal
+  - operator_usage_whitespace
+  - overridden_super_call
+  - override_in_extension
+  - pattern_matching_keywords
+  - prefer_self_in_static_references
+  - prefer_zero_over_explicit_init
+  - private_action
+  - prohibited_interface_builder
+  - redundant_nil_coalescing
+  - redundant_type_annotation
+  - required_enum_case
+  - single_test_class
+  - sorted_first_last
+  - static_operator
+  - switch_case_on_newline
+  - toggle_bool
+  - unavailable_function
+  - unneeded_parentheses_in_closure_argument
+  - untyped_error_in_catch
+  - vertical_parameter_alignment_on_call
+  - xct_specific_matcher
+  - yoda_condition
+
+custom_rules:
+  # [Checklist: State Management - Senior Audit: @State never used for classes]
+  state_property_wrapper_reference_type:
+    name: "Senior Audit: @State with Reference Type"
+    regex: "@State\\s+(?:private\\s+)?var\\s+\\w+\\s*=\\s*[A-Z]\\w+\\(\\)"
+    message: "@State should only be used for value types (structs). For classes, use @StateObject or @Observable."
+    severity: error
+
+  # [Checklist: Performance - Senior Check: Heavy computations NOT inside body]
+  heavy_computation_in_body:
+    name: "Senior Check: Logic in View Body"
+    regex: "var\\s+body:\\s+some\\s+View\\s*\\{[^\\}]*(?:\\.filter|\\.sorted|\\.map|\\.reduce|\\.compactMap)\\s*\\{"
+    message: "Heavy computations (filter/sort/map) should be moved to a ViewModel or memoized property, not inside 'body'."
+    severity: warning
+
+  # [Checklist: Code Quality - Magic numbers extracted]
+  magic_number_view:
+    name: "Magic Number in View"
+    regex: "(?:padding|frame|spacing|cornerRadius)\\((\\d{3,}|[1-9]\\d{2,})\\)"
+    message: "Avoid large magic numbers in views. Extract to AppConstants or DrawerConstants."
+    severity: warning
+
+  # [Checklist: Concurrency - MainActor for UI updates]
+  main_actor_missing_on_published:
+    name: "MainActor check for Published"
+    regex: "(?<!@MainActor\\s)class\\s+\\w+:\\s*ObservableObject"
+    message: "ObservableObject classes should usually be marked @MainActor to ensure UI updates happen on the main thread."
+    severity: warning
+
+  # [Checklist: Memory Management - weak self in closures]
+  weak_self_in_closures:
+    name: "Weak Self in Closures"
+    regex: "\\.async\\s*\\{\\s*(?!\\[weak self\\])"
+    message: "Use [weak self] in async closures to avoid potential retain cycles."
+    severity: warning
+
+  # [Checklist: Localization - Hardcoded strings]
+  hardcoded_localization:
+    name: "Hardcoded String in View"
+    regex: "Text\\(\"([^\"]+)\"\\)"
+    message: "User-facing strings should be moved to Localizable.strings or use localized keys."
+    severity: warning
+
+  # [Checklist: Accessibility - Missing labels]
+  accessibility_missing:
+    name: "Accessibility Missing"
+    regex: "Button\\(action:.*\\)\\s*\\{\\s*Image\\(systemName:.*\\)\\s*\\}(?!\\.accessibilityLabel)"
+    message: "Icon-only buttons should have an .accessibilityLabel provided."
+    severity: warning
+
+# Standard Rule Configurations
+force_unwrapping: error
+
+identifier_name:
+  min_length: 3
+  max_length: 40
+  excluded: 
+    - id
+    - x
+    - y
+    - vm
+
+type_name:
+  min_length: 3
+  max_length: 40
+
+line_length: 120
+type_body_length: 300
+file_length: 500
+
+included:
+  - OTPEmbedDrawer
+excluded:
+  - Pods
+  - .build
+  - DerivedData
