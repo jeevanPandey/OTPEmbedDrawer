@@ -1,22 +1,23 @@
 # SwiftLint Configuration - Automated Senior Reviewer
-# Mapped from: codereview_ios.md
+# Aligned with: codereview_ios.md
 
-disabled_rules: # rule identifiers to exclude from running
+disabled_rules:
   - trailing_whitespace
   - todo
   - function_body_length
 
-opt_in_rules: # some rules are only opt-in
+opt_in_rules:
   - force_unwrapping # [Checklist: Safety - Force unwrapping avoided]
-  - private_outlet
+  - modifier_order # [Checklist: Architecture - Modifier Ordering]
+  - sorted_imports # [Checklist: Cleanliness]
   - attributes
-  - empty_count
   - contains_over_first_not_nil
   - convenience_type
   - discarded_notification_center_observer
   - discouraged_object_literal
   - discouraged_optional_boolean
   - discouraged_optional_collection
+  - empty_count
   - empty_string
   - empty_xctest_method
   - enum_case_associated_values_count
@@ -35,13 +36,11 @@ opt_in_rules: # some rules are only opt-in
   - let_var_whitespace
   - literal_expression_end_indentation
   - lower_acl_than_parent
-  - modifier_order # [Checklist: Architecture - Modifier Ordering]
-  - nim_character_count
   - nsobject_prefer_isequal
   - number_separator
   - object_literal
   - operator_usage_whitespace
-  - overriden_super_call
+  - overridden_super_call
   - override_in_extension
   - pattern_matching_keywords
   - prefer_self_in_static_references
@@ -53,9 +52,7 @@ opt_in_rules: # some rules are only opt-in
   - required_enum_case
   - single_test_class
   - sorted_first_last
-  - sorted_imports
   - static_operator
-  - strong_outlets
   - switch_case_on_newline
   - toggle_bool
   - unavailable_function
@@ -65,12 +62,11 @@ opt_in_rules: # some rules are only opt-in
   - xct_specific_matcher
   - yoda_condition
 
-# Custom rules to match the Senior Checklist items that aren't standard
 custom_rules:
   # [Checklist: State Management - Senior Audit: @State never used for classes]
   state_property_wrapper_reference_type:
     name: "Senior Audit: @State with Reference Type"
-    regex: "@State\\s+(?:private\\s+)?var\\s+\\w+\\s*=\\s*\\w+\\(\\)"
+    regex: "@State\\s+(?:private\\s+)?var\\s+\\w+\\s*=\\s*[A-Z]\\w+\\(\\)"
     message: "@State should only be used for value types (structs). For classes, use @StateObject or @Observable."
     severity: error
 
@@ -95,23 +91,50 @@ custom_rules:
     message: "ObservableObject classes should usually be marked @MainActor to ensure UI updates happen on the main thread."
     severity: warning
 
+  # [Checklist: Memory Management - weak self in closures]
+  weak_self_in_closures:
+    name: "Weak Self in Closures"
+    regex: "\\.async\\s*\\{\\s*(?!\\[weak self\\])"
+    message: "Use [weak self] in async closures to avoid potential retain cycles."
+    severity: warning
+
+  # [Checklist: Localization - Hardcoded strings]
+  hardcoded_localization:
+    name: "Hardcoded String in View"
+    regex: "Text\\(\"([^\"]+)\"\\)"
+    message: "User-facing strings should be moved to Localizable.strings or use localized keys."
+    severity: warning
+
+  # [Checklist: Accessibility - Missing labels]
+  accessibility_missing:
+    name: "Accessibility Missing"
+    regex: "Button\\(action:.*\\)\\s*\\{\\s*Image\\(systemName:.*\\)\\s*\\}(?!\\.accessibilityLabel)"
+    message: "Icon-only buttons should have an .accessibilityLabel provided."
+    severity: warning
+
 # Standard Rule Configurations
 force_unwrapping: error
-naming_convention:
-  variable_name:
-    min_length: 3
-    max_length: 40
-  type_name:
-    min_length: 3
-    max_length: 40
+
+identifier_name:
+  min_length: 3
+  max_length: 40
+  excluded: 
+    - id
+    - x
+    - y
+    - vm
+
+type_name:
+  min_length: 3
+  max_length: 40
 
 line_length: 120
 type_body_length: 300
 file_length: 500
 
-included: # paths to include during linting
+included:
   - OTPEmbedDrawer
-excluded: # paths to ignore during linting
+excluded:
   - Pods
   - .build
   - DerivedData

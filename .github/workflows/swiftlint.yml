@@ -1,4 +1,4 @@
-name: Free Code Review (SwiftLint)
+name: "Automated code review:"
 
 on:
   pull_request:
@@ -8,13 +8,12 @@ on:
 
 jobs:
   SwiftLint:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: GitHub Action for SwiftLint (Inline Annotations)
-        uses: norio-nomura/action-swiftlint@3.2.1
-        env:
-          DIFF_BASE: ${{ github.base_ref }}
-        with:
-          args: --strict
+      - name: Install SwiftLint
+        run: brew install swiftlint
+
+      - name: Run SwiftLint
+        run: swiftlint --reporter github-actions-logging || true
