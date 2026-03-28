@@ -12,12 +12,5 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: SwiftLint
-        uses: realm/swiftlint@v1
-        with:
-          version: 'latest'
-          # This will automatically post annotations to the PR
-          executable: /usr/local/bin/swiftlint
-          reporter: 'github-actions-log'
-        env:
-          DIFF_BASE: ${{ github.base_ref }}
+      - name: Run SwiftLint
+        run: swiftlint --reporter github-actions-log
